@@ -165,6 +165,7 @@ class Crawler(Schedule):
             preprocessed_list.append(PreprocessedArticle(
                 tokens=self.tokenizer(article.__getattribute__(self.conf['TOKENIZING_TARGET'])),
                 embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']), show_progress_bar=False),
+                # TODO 단일 문서 요약
                 summary=''
             ))
         return preprocessed_list

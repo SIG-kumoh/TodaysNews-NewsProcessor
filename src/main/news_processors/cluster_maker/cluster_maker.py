@@ -70,6 +70,7 @@ class ClusterMaker(Schedule):
 
         if self.min_document < len(article_list):
             topic_words, labels, centroids = self._topic_clustering(article_list)
+            # TODO 다중 문서 요약 및 센트로이드 추출
             summary = self._cluster_summary(article_list, labels)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,
@@ -104,14 +105,16 @@ class ClusterMaker(Schedule):
         for section in section_list:
             self.section_id[section.section_name] = section.section_id
 
-    def _cluster_summary(self, news_list, labels) -> Dict[int, str]:
+    def _cluster_summary(self, article_list, labels) -> Dict[int, str]:
         summary = {}
-        for label, news in zip(labels, news_list):
+        for label, article in zip(labels, article_list):
             if label not in summary:
                 summary[label] = []
-            summary[label].append(news.content)
+            summary[label].append(article.content)
 
         for label, content_list in tqdm(summary.items()):
+            # TODO 다중 문서 요약
+            # TODO 센트로이드 추출
             summary[label] = ""
 
         return summary
@@ -142,6 +145,7 @@ class ClusterMaker(Schedule):
         return labeled_preprocessed_clusters
 
     def _topic_clustering(self, article_list):
+        # TODO 센트로이드 추출 제거
         # 1. embeddings, tokens 리스트 생성
         preprocessed_list = self.preprocessed_article_repository.find_all_by_article(articles=article_list)
         embeddings = []
