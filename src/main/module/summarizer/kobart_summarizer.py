@@ -7,7 +7,7 @@ configuration_utils.logger.setLevel(logging.ERROR)
 class KoBARTSummarizer:
     def __init__(self):
         self.tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
-        # TODO 컨픽으로 위치 조정 가능하게 수정
+        # TODO USE CONFIG FILE
         self.model = BartForConditionalGeneration.from_pretrained('resources/summary_model')
 
     def summarize(self, text: str) -> str:

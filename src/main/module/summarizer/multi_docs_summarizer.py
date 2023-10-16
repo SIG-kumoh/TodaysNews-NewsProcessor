@@ -1,10 +1,9 @@
 from .rdass import RDASS
 from rouge import Rouge
-from typing import Union
-from itertools import zip_longest
 from dataclasses import dataclass
-from ._kobart_summarizer import KoBARTSummarizer
+from .kobart_summarizer import KoBARTSummarizer
 from sentence_transformers import SentenceTransformer
+from persistence.models import Article, PreprocessedArticle
 
 
 @dataclass
@@ -12,6 +11,13 @@ class News:
     title: str
     lead: str
     content: str
+    summary: str
+
+
+@dataclass
+class Centroid:
+    article: Article
+    score: float
     summary: str
 
 
@@ -39,38 +45,39 @@ class MultiDocsSummarizer:
                     self._rouge.get_scores(hyps=news.summary, refs=' '.join(topics))[0]['rouge-1']['f'])
 
     def _get_news_list(self,
-                       title_list: list[str],
-                       content_list: list[str],
-                       summary_list: list[str]) -> list[News]:
+                       article_list: list[Article],
+                       preprocessed_list: list[PreprocessedArticle]) -> list[News]:
         """주어진 문서에서 뉴스 타입 리스트 반환"""
         news_list: list[News] = []
 
-        for title, content, summary in zip_longest(title_list, content_list, summary_list, fillvalue=""):
-            news_list.append(News(title=title, lead=content.split('.')[0], content=content, summary=summary))
+        for article, preprocessed_article in zip(article_list, preprocessed_list):
+            news_list.append(News(title=article.title,
+                                  lead=article.content.split('.')[0],
+                                  content=article.content,
+                                  summary=preprocessed_article.summary))
 
         return news_list
 
     def summarize(self,
-                  title_list: list[str],
-                  content_list: list[str],
-                  summary_list: list[str],
+                  article_list: list[Article],
+                  preprocessed_list: list[PreprocessedArticle],
                   topics: list[str],
-                  regard_lead_as_summary: bool = False) -> str:
+                  regard_lead_as_summary: bool = False) -> Centroid:
         """다중 문서 요약 수행"""
-        news_list: list[News] = self._get_news_list(title_list=title_list,
-                                                    content_list=content_list,
-                                                    summary_list=summary_list)
-        representative_news: dict[str, Union[str, float]] = {'summary': "", 'score': 0}
+        news_list: list[News] = self._get_news_list(article_list=article_list,
+                                                    preprocessed_list=preprocessed_list)
+        centroid: Centroid = Centroid(Article(), 0, "")
 
-        for news in news_list:
+        for idx, news in enumerate(news_list):
             cur_rdass: float = self._get_rdass_score(news=news,
                                                      regard_lead_as_summary=regard_lead_as_summary)
             cur_rouge: float = self._get_rouge_score(news=news,
                                                      topics=topics,
                                                      regard_lead_as_summary=regard_lead_as_summary)
 
-            if representative_news['score'] < cur_rdass + cur_rouge:
-                representative_news['summary'] = news.lead + '\n' + news.summary
-                representative_news['score'] = cur_rdass + cur_rouge
+            if centroid.score < cur_rdass + cur_rouge:
+                centroid.idx = article_list[idx]
+                centroid.score = cur_rdass + cur_rouge
+                centroid.summary = news.lead + '\n' + news.summary
 
-        return representative_news['summary']
+        return centroid
