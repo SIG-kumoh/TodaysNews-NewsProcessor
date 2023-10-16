@@ -1,0 +1,20 @@
+HOME: 'https://news.naver.com/main/list.naver?mode=LPOD&mid=sec&oid='
+DATE: '&date='
+PAGE: '&page='
+CODE:
+  경향신문: '032'
+  국민일보: '005'
+  동아일보: '020'
+  문화일보: '021'
+  서울신문: '081'
+  세계일보: '022'
+  조선일보: '023'
+  중앙일보: '025'
+  한겨레: '028'
+  한국일보: '469'
+
+# title, content
+EMBEDDING_TARGET: 'content'
+TOKENIZING_TARGET: 'content'
+EMBEDDING_MODEL: 'jhgan/ko-sroberta-nli'
+
