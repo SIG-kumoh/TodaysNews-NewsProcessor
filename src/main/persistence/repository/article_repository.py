@@ -1,4 +1,5 @@
 from datetime import datetime, date, timedelta
+from typing import List, Union
 
 from module.custom_orm import Repository
 from module.custom_orm.query import *
@@ -21,4 +22,8 @@ class ArticleRepository(Repository):
         else:
             query = Column('section_id', section_id)
 
+        return self.find_all_by(query)
+
+    def find_all_by_cluster_id(self, cluster_id: int) -> List[Article]:
+        query = Column('cluster_id', cluster_id)
         return self.find_all_by(query)

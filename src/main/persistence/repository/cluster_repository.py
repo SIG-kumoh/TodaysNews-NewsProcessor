@@ -11,7 +11,7 @@ class ClusterRepository(Repository):
     def __init__(self):
         super().__init__(Cluster)
 
-    def find_all_by_duration(self, duration: Union[date, tuple]):
+    def find_all_by_duration(self, duration: Union[date, tuple]) -> List[Cluster]:
         if isinstance(duration, date):
             start = datetime.combine(duration, datetime.min.time())
             end = start + timedelta(days=1)
@@ -20,14 +20,14 @@ class ClusterRepository(Repository):
         query = Between('regdate', *duration)
         return self.find_all_by(query)
 
-    def find_all_by_section(self,
-                            section_name: str,
-                            duration: Union[date, tuple] = None) -> List[Cluster]:
+    def find_all_by_section_id(self,
+                               section_id: int,
+                               duration: Union[date, tuple] = None) -> List[Cluster]:
         if isinstance(duration, date):
             start = datetime.combine(duration, datetime.min.time())
             end = start + timedelta(days=1)
             duration = (start, end)
 
-        query = And(Column('section', section_name),
+        query = And(Column('section_id', section_id),
                     Between('regdate', *duration))
         return self.find_all_by(query)
