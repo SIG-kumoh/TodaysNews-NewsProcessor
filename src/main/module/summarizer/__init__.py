@@ -1,0 +1,1 @@
+from .multi_docs_summarizer import MultiDocsSummarizer

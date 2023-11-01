@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer
 from datetime import datetime, date
 
 from module.scheduler import Schedule
+from module.summarizer.kobart_summarizer import KoBARTSummarizer
 from persistence.models import PreprocessedArticle, Article, Section
 from persistence.repository import PreprocessedArticleRepository, ArticleRepository, SectionRepository
 
@@ -27,6 +28,7 @@ class Crawler(Schedule):
 
         self.embedding_model = SentenceTransformer(self.conf['EMBEDDING_MODEL'])
         self.tokenizer = CustomTokenizer(Okt())
+        self.summarizer = KoBARTSummarizer()
 
         # TODO 리팩터링
         self.logger = logging.getLogger('crawler')
@@ -162,12 +164,16 @@ class Crawler(Schedule):
 
         preprocessed_list = []
         for article in article_list:
+            if len(article.content) > 650:
+                summary = self.summarizer.summarize(article.content[len(article.content) // 2:])
+            else:
+                summary = ""
+
             preprocessed_list.append(PreprocessedArticle(
                 tokens=self.tokenizer(article.__getattribute__(self.conf['TOKENIZING_TARGET'])),
-                embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']), show_progress_bar=False),
-                # TODO 단일 문서 요약
-                summary=''
-            ))
+                embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']),
+                                                      show_progress_bar=False),
+                summary=summary))
         return preprocessed_list
 
     def _find_article_url(self, soup) -> [str]:

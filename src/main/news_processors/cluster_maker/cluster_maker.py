@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-from persistence.models import Cluster, PreprocessedCluster
+from persistence.models import Cluster, PreprocessedCluster, Article
 from ._ctfidf import ClassTfidfTransformer
 from ._clustering import clustering
 from persistence.repository import *
@@ -13,11 +13,13 @@ import pandas as pd
 
 from tqdm import tqdm
 from umap import UMAP
-from typing import List, Dict
+from typing import List, Dict, Union
 from datetime import datetime, date, timedelta
+from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 
 from module.scheduler import Schedule
+from module.summarizer.multi_docs_summarizer import MultiDocsSummarizer, Centroid
 
 CONFIG_PATH = 'resources/config/cluster_maker/config.yml'
 
@@ -31,6 +33,7 @@ class ClusterMaker(Schedule):
                          low_memory=False)
         self.vectorizer = CountVectorizer(tokenizer=_no_process, preprocessor=_no_process, token_pattern=None)
         self.ctfidf = ClassTfidfTransformer()
+        self.mds = MultiDocsSummarizer(SentenceTransformer('jhgan/ko-sroberta-nli'))
 
         self.article_repository = ArticleRepository()
         self.preprocessed_article_repository = PreprocessedArticleRepository()
@@ -69,13 +72,11 @@ class ClusterMaker(Schedule):
                                                                       t_date=t_date)
 
         if self.min_document < len(article_list):
-            topic_words, labels, centroids = self._topic_clustering(article_list)
-            # TODO 다중 문서 요약 및 센트로이드 추출
-            summary = self._cluster_summary(article_list, labels)
+            topic_words, labels = self._topic_clustering(article_list)
+            centroids = self._extract_centroids(article_list, labels, topic_words)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,
                                                            centroids=centroids,
-                                                           summary=summary,
                                                            section_name=section_name)
 
             self.cluster_repository.insert(list(labeled_clusters.values()))
@@ -105,47 +106,63 @@ class ClusterMaker(Schedule):
         for section in section_list:
             self.section_id[section.section_name] = section.section_id
 
-    def _cluster_summary(self, article_list, labels) -> Dict[int, str]:
-        summary = {}
-        for label, article in zip(labels, article_list):
-            if label not in summary:
-                summary[label] = []
-            summary[label].append(article.content)
+    def _extract_centroids(self,
+                           article_list,
+                           labels,
+                           topics: Dict[int, list[tuple[str, float]]]) -> Dict[int, Centroid]:
+        centroids = {}
+        for label, article, topics in zip(labels, article_list, topics):
+            if label not in centroids:
+                centroids[label] = []
+            centroids[label].append(article)
 
-        for label, content_list in tqdm(summary.items()):
-            # TODO 다중 문서 요약
-            # TODO 센트로이드 추출
-            summary[label] = ""
+        for label, articles_list_in_cluster in tqdm(centroids.items()):
+            topic_words = []
+            for topics_in_cluster in topics[label]:
+                topic_words.append(topics_in_cluster[0])
 
-        return summary
+            preprocessed_list = self.preprocessed_article_repository.find_all_by_article(articles=articles_list_in_cluster)
+            centroids[label] = self.mds.summarize(article_list=articles_list_in_cluster,
+                                                  preprocessed_list=preprocessed_list,
+                                                  topics=topic_words)
 
-    def _make_labeled_clusters(self, labels, t_datetime, centroids, summary, section_name):
+        return centroids
+
+    def _make_labeled_clusters(self,
+                               labels,
+                               t_datetime,
+                               centroids: Dict[int, Centroid],
+                               section_name):
         labeled_clusters = {}
         for label in labels:
             if label != -1:
                 new_topic = Cluster(regdate=t_datetime,
-                                    img_url=centroids[label][0].img_url,
-                                    title=centroids[label][0].title,
-                                    summary=summary[label],
+                                    img_url=centroids[label].article.img_url,
+                                    title=centroids[label].article.title,
+                                    summary=centroids[label].summary,
                                     section_id=self.section_id[section_name],
                                     related_cluster_id=None)
                 labeled_clusters[label] = new_topic
 
         return labeled_clusters
 
-    def _make_preprocessed_clusters(self, labels, labeled_clusters, centroids, topic_words):
+    def _make_preprocessed_clusters(self,
+                                    labels,
+                                    labeled_clusters,
+                                    centroids: Dict[int, Centroid],
+                                    topic_words):
         labeled_preprocessed_clusters = {}
         for label in labels:
             if label != -1:
+                preprocessed_article = self.preprocessed_article_repository.find_all_by_article(centroids[label].article)
                 new_pre_cluster = PreprocessedCluster(cluster_id=labeled_clusters[label].cluster_id,
-                                                      embedding=centroids[label][1].embedding,
+                                                      embedding=preprocessed_article[0].embedding,
                                                       words=[e[0] for e in topic_words[label]])
                 labeled_preprocessed_clusters[label] = new_pre_cluster
 
         return labeled_preprocessed_clusters
 
     def _topic_clustering(self, article_list):
-        # TODO 센트로이드 추출 제거
         # 1. embeddings, tokens 리스트 생성
         preprocessed_list = self.preprocessed_article_repository.find_all_by_article(articles=article_list)
         embeddings = []
@@ -165,23 +182,17 @@ class ClusterMaker(Schedule):
         c_tf_idf, c_words = self._extract_topic(classed_tokens)
         topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 10)
 
-        # 5. 토픽으로 노이즈 제거 및 센트로이드 추출
+        # 5. 토픽으로 노이즈 제거
         tf_idf, words = self._extract_topic(tokens_list)
         topics = self._remove_noise_topics(topics, labels, tf_idf)
-        labels, centroids = self._remove_noise_news_and_extract_centroid(topics, labels, tf_idf)
-
-        centroids_news = {}
-        for label in centroids.keys():
-            news_idx = centroids[label][0]
-            centroids_news[label] = (article_list[news_idx], preprocessed_list[news_idx])
+        labels = self._remove_noise_news(topics, labels, tf_idf)
 
         # 6. 노이즈 제거된 군집에 대하여, c-TF-IDF로 다시 토픽 추출
         classed_tokens = _tokens_per_label(labels, tokens_list)
         c_tf_idf, c_words = self._extract_topic(classed_tokens)
         topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 10)
 
-        return topics, labels, centroids_news
-
+        return topics, labels
 
     def _extract_topic(self, tokens_list):
         self.vectorizer.fit(tokens_list)
@@ -215,7 +226,7 @@ class ClusterMaker(Schedule):
 
         return topics
 
-    def _remove_noise_news_and_extract_centroid(self, topics, labels, matrix):
+    def _remove_noise_news(self, topics, labels, matrix):
         tf_idf_values = []
         thresholds = {}
 
@@ -240,24 +251,7 @@ class ClusterMaker(Schedule):
             iqr = q3 - q1
             thresholds[label] = q1 - iqr * 1.3
 
-        label_iter = iter(labels)
-        tf_idf_iter = iter(tf_idf_values)
-        centroids = {}
-
-        for idx in range(len(labels)):
-            cur_label = next(label_iter)
-            cur_tf_idf = next(tf_idf_iter)
-
-            if cur_tf_idf < thresholds[cur_label]:
-                labels[idx] = -1
-            else:
-                if cur_label not in centroids:
-                    centroids[cur_label] = (idx, cur_tf_idf)
-                else:
-                    if centroids[cur_label][1] < cur_tf_idf:
-                        centroids[cur_label] = (idx, cur_tf_idf)
-
-        return labels, centroids
+        return labels
 
 
 def _no_process(e):
