@@ -140,7 +140,9 @@ class Crawler(Schedule):
                                hour=int(date_str[11:13]), minute=int(date_str[14:16]), second=int(date_str[17:19]))
             img_url = soup.find('img', id='img1')['data-src']
             soup.find('span', class_='end_photo_org').decompose()
-            content = only_BMP_area(simply_ws(remove_tag(soup.find('div', id='newsct_article'))))
+            content_soup = soup.find('div', id='newsct_article')
+            content_soup.find_all('strong')[0].decompose()
+            content = only_BMP_area(simply_ws(remove_tag(content_soup)))
             writer = only_BMP_area(remove_tag(soup.find('span', class_='byline_s')))[:100]
             section_name = remove_tag(soup.find('em', class_='media_end_categorize_item'))
 
