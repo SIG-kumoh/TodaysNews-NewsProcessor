@@ -5,10 +5,10 @@ configuration_utils.logger.setLevel(logging.ERROR)
 
 
 class KoBARTSummarizer:
-    def __init__(self):
+    def __init__(self, model_path='resources/summary_model'):
         self.tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
         # TODO USE CONFIG FILE
-        self.model = BartForConditionalGeneration.from_pretrained('resources/summary_model')
+        self.model = BartForConditionalGeneration.from_pretrained(model_path)
 
     def summarize(self, text: str) -> str:
         text = text.replace('\n', ' ')
