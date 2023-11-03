@@ -111,7 +111,7 @@ class ClusterMaker(Schedule):
                            labels,
                            topics: Dict[int, list[tuple[str, float]]]) -> Dict[int, Centroid]:
         centroids = {}
-        for label, article, topics in zip(labels, article_list, topics):
+        for label, article in zip(labels, article_list):
             if label not in centroids:
                 centroids[label] = []
             centroids[label].append(article)

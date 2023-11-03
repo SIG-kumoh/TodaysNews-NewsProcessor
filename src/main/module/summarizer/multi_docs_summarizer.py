@@ -73,7 +73,7 @@ class MultiDocsSummarizer:
                                                      topics=topics)
 
             if centroid.score < cur_rdass + cur_rouge:
-                centroid.idx = article_list[idx]
+                centroid.article = article_list[idx]
                 centroid.score = cur_rdass + cur_rouge
                 centroid.summary = news.lead + ".\n" + news.summary
 

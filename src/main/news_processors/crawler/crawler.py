@@ -141,8 +141,12 @@ class Crawler(Schedule):
             img_url = soup.find('img', id='img1')['data-src']
             soup.find('span', class_='end_photo_org').decompose()
             content_soup = soup.find('div', id='newsct_article')
-            content_soup.find_all('strong')[0].decompose()
+            strong_list = content_soup.find_all('strong')
+            if len(strong_list) > 0:
+                strong_list[0].decompose()
             content = only_BMP_area(simply_ws(remove_tag(content_soup)))
+            if len(content) < 50:
+                raise Exception
             writer = only_BMP_area(remove_tag(soup.find('span', class_='byline_s')))[:100]
             section_name = remove_tag(soup.find('em', class_='media_end_categorize_item'))
 

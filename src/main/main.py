@@ -12,8 +12,8 @@ if __name__ == '__main__':
     # crawling_start = Crawler()
     clustering_start = ClusterMaker()
 
-    start = date(year=2023, month=9, day=15)
-    end = date(year=2023, month=10, day=12)
+    start = date(year=2023, month=10, day=19)
+    end = date(year=2023, month=10, day=19)
 
     t_date = start
     while t_date <= end:
