@@ -73,6 +73,7 @@ class ClusterMaker(Schedule):
 
         if self.min_document < len(article_list):
             topic_words, labels = self._topic_clustering(article_list)
+
             centroids = self._extract_centroids(article_list, labels, topic_words)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,

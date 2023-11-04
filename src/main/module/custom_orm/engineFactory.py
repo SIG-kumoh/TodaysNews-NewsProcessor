@@ -6,8 +6,8 @@ from sqlalchemy.orm import sessionmaker
 class EngineFactory:
     __username = 'root'
     __password = 'admin'
-    __host = '192.168.0.2'
-    __port = 3306
+    __host = '202.31.202.34'
+    __port = 80
     __db_name = 'todays_news'
     __engine = None
 

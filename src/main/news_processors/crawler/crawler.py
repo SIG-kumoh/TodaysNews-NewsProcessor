@@ -29,7 +29,7 @@ class Crawler(Schedule):
         self.embedding_model = SentenceTransformer(self.conf['EMBEDDING_MODEL'])
         self.tokenizer = CustomTokenizer(Okt())
         self.summarizer = KoBARTSummarizer()
-        self.lead_extractor = KoBARTSummarizer('resources/lead_extractor')
+        self.lead_extractor = KoBARTSummarizer('resources/summary_model')
 
         # TODO 리팩터링
         self.logger = logging.getLogger('crawler')
@@ -177,7 +177,6 @@ class Crawler(Schedule):
                 summary = ""
 
             preprocessed_list.append(PreprocessedArticle(
-                tokens=self.tokenizer(article.__getattribute__(self.conf['TOKENIZING_TARGET'])),
                 embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']),
                                                       show_progress_bar=False),
                 read=self.lead_extractor.summarize(article.content),
