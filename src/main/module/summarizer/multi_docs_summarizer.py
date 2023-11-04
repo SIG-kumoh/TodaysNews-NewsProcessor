@@ -26,7 +26,6 @@ class MultiDocsSummarizer:
         self._rouge = Rouge()
         self._rdass = RDASS(sentence_bert)
         self._summarizer = KoBARTSummarizer()
-        self._lead_extractor = KoBARTSummarizer('resources/lead_extractor')
 
     def _get_rdass_score(self, news: News) -> float:
         """뉴스의 RDASS 점수 산출"""
@@ -53,7 +52,7 @@ class MultiDocsSummarizer:
 
         for article, preprocessed_article in zip(article_list, preprocessed_list):
             news_list.append(News(title=article.title,
-                                  lead=self._lead_extractor.summarize(article.content),
+                                  lead=preprocessed_article.read,
                                   content=article.content,
                                   summary=preprocessed_article.summary))
 
@@ -76,6 +75,6 @@ class MultiDocsSummarizer:
             if centroid.score < cur_rdass + cur_rouge:
                 centroid.article = article_list[idx]
                 centroid.score = cur_rdass + cur_rouge
-                centroid.summary = news.lead + ".\n" + news.summary
+                centroid.summary = news.lead + " " + news.summary
 
         return centroid
