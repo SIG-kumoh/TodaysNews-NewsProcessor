@@ -41,6 +41,7 @@ class ClusterMaker(Schedule):
         self.preprocessed_cluster_repository = PreprocessedClusterRepository()
 
         self.noise_threshold = 0.5
+        self.min_cluster_size = 5
         self.min_document = 20
 
         self.section_id = {}
@@ -73,6 +74,7 @@ class ClusterMaker(Schedule):
 
         if self.min_document < len(article_list):
             topic_words, labels = self._topic_clustering(article_list)
+            topic_words, labels = self._remove_minimum_cluster(topic_words, labels)
             centroids = self._extract_centroids(article_list, labels, topic_words)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,
@@ -93,9 +95,6 @@ class ClusterMaker(Schedule):
                     article.cluster_id = labeled_clusters[label].cluster_id
 
             article_list = self.article_repository.update(article_list)
-
-            # TODO 삭제
-            # _save_file(article_list, labels, topic_words, section_name, t_date)
 
         else:
             self.logger.debug(f'{section_name} section, too small')
@@ -253,6 +252,22 @@ class ClusterMaker(Schedule):
 
         return labels
 
+    def _remove_minimum_cluster(self, topic_words, labels):
+        count = {key: 0 for key in topic_words.keys()}
+        for label in labels:
+            count[label] += 1
+
+        delete_labels = []
+        for key, count in count.items():
+            if count < self.min_cluster_size:
+                delete_labels.append(key)
+
+        for idx in range(len(labels)):
+            if labels[idx] in delete_labels:
+                labels[idx] = -1
+
+        return topic_words, labels
+
 
 def _no_process(e):
     return e
@@ -296,22 +311,3 @@ def _tokens_per_label(labels, tokens_list):
     tokens_per_label = labeled_tokens.groupby(['Label'], as_index=False).agg({'Tokens': 'sum'})
     classed_tokens = tokens_per_label.Tokens.values
     return classed_tokens
-
-
-def _save_file(news_list, labels, topic_words, section, t_date):
-    distributed_docs = []
-    for doc, tag in zip(news_list, labels):
-        distributed_docs.append({'tag': tag,
-                                 'id': doc.article_id,
-                                 'title': doc.title,
-                                 'url': doc.url,
-                                 'content': doc.content})
-    distributed_docs.sort(key=lambda x: x['tag'])
-
-    print('save to csv...')
-    topic_df = pd.DataFrame(columns=['topic_words'], index=list(topic_words.keys()),
-                            data=[str([e2[0] for e2 in e1]) for e1 in topic_words.values()])
-    distributed_docs_df = pd.DataFrame(columns=['tag', 'id', 'title', 'url', 'content'], data=distributed_docs)
-
-    topic_df.to_csv(f'../temp/{section}_topic_list_{str(t_date)}.csv', encoding='utf-8')
-    distributed_docs_df.to_csv(f'../temp/{section}_distributed_docs_{str(t_date)}.csv', encoding='utf-8')
