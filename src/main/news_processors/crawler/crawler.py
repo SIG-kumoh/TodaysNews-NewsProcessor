@@ -146,7 +146,7 @@ class Crawler(Schedule):
             if len(strong_list) > 0:
                 strong_list[0].decompose()
             content = only_BMP_area(simply_ws(remove_tag(content_soup)))
-            if len(content) < 50:
+            if len(content) < 50 or len(content) > 10000:
                 raise Exception
             writer = only_BMP_area(remove_tag(soup.find('span', class_='byline_s')))[:100]
             section_name = remove_tag(soup.find('em', class_='media_end_categorize_item'))
@@ -177,6 +177,7 @@ class Crawler(Schedule):
                 summary = ""
 
             preprocessed_list.append(PreprocessedArticle(
+                tokens=self.tokenizer(article.__getattribute__(self.conf['TOKENIZING_TARGET'])),
                 embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']),
                                                       show_progress_bar=False),
                 read=self.lead_extractor.summarize(article.content),
