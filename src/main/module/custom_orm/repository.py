@@ -1,5 +1,5 @@
 from typing import Union, List
-from sqlalchemy import MetaData, select
+from sqlalchemy import MetaData, select, func
 
 from .query import *
 from .engineFactory import EngineFactory
@@ -82,3 +82,9 @@ class Repository:
         query = select(table).where(query(table))
         datas = self.engine.execute(query)
         return [self._model_class(**row) for row in datas.fetchall()]
+
+    def count_by(self, query: Query) -> int:
+        table = Table(self.table_name, self.meta_data, autoload=True, autoload_with=self.engine)
+        query = select([func.count()]).where(query(table))
+        res = self.engine.execute(query).scalar()
+        return res

@@ -1,5 +1,5 @@
 # coding: utf-8
-from sqlalchemy import BigInteger, CHAR, Column, DateTime, ForeignKey
+from sqlalchemy import BigInteger, CHAR, Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT, MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
@@ -66,4 +66,14 @@ class PreprocessedCluster(Base):
     cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     embedding = Column(Vector, nullable=False)
     words = Column(PyObject, nullable=False)
+
+
+class HotCluster(Base):
+    __tablename__ = 'hot_cluster'
+
+    cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    regdate = Column(DateTime, nullable=False)
+    size = Column(Integer, nullable=False)
+    namespace = Column(CHAR(45), nullable=False)
+
 

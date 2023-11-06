@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-from persistence.models import Cluster, PreprocessedCluster, Article
+from persistence.models import Cluster, PreprocessedCluster, Article, HotCluster
 from ._ctfidf import ClassTfidfTransformer
 from ._clustering import clustering
 from persistence.repository import *
@@ -39,6 +39,7 @@ class ClusterMaker(Schedule):
         self.preprocessed_article_repository = PreprocessedArticleRepository()
         self.cluster_repository = ClusterRepository()
         self.preprocessed_cluster_repository = PreprocessedClusterRepository()
+        self.hot_cluster_repository = HotClusterRepository()
 
         self.noise_threshold = 0.5
         self.min_cluster_size = 5
@@ -59,13 +60,21 @@ class ClusterMaker(Schedule):
         if t_date is None:
             t_date = date.today()
 
-        # 당일 클러스터 삭제 - TODO 오류있음
+        # 당일 클러스터 삭제
         clusters = self.cluster_repository.find_all_by_duration(t_date)
         self.cluster_repository.delete(clusters)
 
         # 섹션 별 클러스터링
         for section_name in self.section_id.keys():
             self.clustering(section_name, t_date)
+
+        # 당일 핫 클러스터 삭제
+        hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
+        self.hot_cluster_repository.delete(hot_clusters)
+
+        # 핫 클러스터 생성
+        hot_clusters = self.make_hot_cluster(t_date)
+        self.hot_cluster_repository.insert(hot_clusters)
 
     def clustering(self, section_name: str, t_date: date):
         t_datetime = datetime.combine(t_date, datetime.min.time())
@@ -268,6 +277,30 @@ class ClusterMaker(Schedule):
                 labels[idx] = -1
 
         return topic_words, labels
+
+    def make_hot_cluster(self, t_date: date) -> List[HotCluster]:
+        clusters = self.cluster_repository.find_all_by_duration(duration=t_date)
+        counted_clusters = []
+        for cluster in clusters:
+            counted_clusters.append((cluster, self.article_repository.count_by_cluster_id(cluster.cluster_id)))
+        counted_clusters = sorted(counted_clusters, key=lambda e: e[1], reverse=True)
+
+        hot_clusters = []
+        for idx in range(10):
+            if idx >= len(counted_clusters):
+                break
+            cur_cluster = counted_clusters[idx][0]
+            cur_count = counted_clusters[idx][1]
+
+            hot_cluster = HotCluster(
+                cluster_id=cur_cluster.cluster_id,
+                regdate=cur_cluster.regdate,
+                size=cur_count,
+                namespace='test'
+            )
+            hot_clusters.append(hot_cluster)
+
+        return hot_clusters
 
 
 def _no_process(e):

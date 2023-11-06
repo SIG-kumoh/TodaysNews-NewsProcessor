@@ -27,3 +27,8 @@ class ArticleRepository(Repository):
     def find_all_by_cluster_id(self, cluster_id: int) -> List[Article]:
         query = Column('cluster_id', cluster_id)
         return self.find_all_by(query)
+
+    def count_by_cluster_id(self, cluster_id: int) -> int:
+        query = Column('cluster_id', cluster_id)
+        return self.count_by(query)
+
