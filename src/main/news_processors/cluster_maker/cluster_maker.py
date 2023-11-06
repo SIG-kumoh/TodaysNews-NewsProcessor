@@ -115,6 +115,7 @@ class ClusterMaker(Schedule):
                 centroids[label] = []
             centroids[label].append(article)
 
+        topics[-1] = [('temp', 0)]
         for label, articles_list_in_cluster in tqdm(centroids.items()):
             topic_words = []
             for topics_in_cluster in topics[label]:
