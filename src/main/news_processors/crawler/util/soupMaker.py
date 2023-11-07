@@ -23,7 +23,10 @@ def open_url(url, logger=None, count=5, sleep_time=3):    # 오류에 대해 최
                 html.close()
             else:
                 source = requests.get(url, headers=headers).content
-
+        except WindowsError as e:
+            if logger is not None:
+                logger.debug(f"[remain try : {str(count)}] win error : {url}")
+            result = open_url(url, logger, count - 1, sleep_time)
         except HTTPError as e:
             if logger is not None:
                 logger.debug(f"[remain try : {str(count)}] {str(e.getcode())} error : {url}")
