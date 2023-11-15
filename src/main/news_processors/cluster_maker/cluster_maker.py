@@ -65,8 +65,8 @@ class ClusterMaker(Schedule):
         self.cluster_repository.delete(clusters)
 
         # 섹션 별 클러스터링
-        for section_name in self.section_id.keys():
-            self.clustering(section_name, t_date)
+        #for section_name in self.section_id.keys():
+        self.clustering("세계", t_date)
 
         # 당일 핫 클러스터 삭제
         hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
@@ -189,7 +189,7 @@ class ClusterMaker(Schedule):
         # 4. 각 군집에 대하여 c-TF-IDF로 토픽 추출
         classed_tokens = _tokens_per_label(labels, tokens_list)
         c_tf_idf, c_words = self._extract_topic(classed_tokens)
-        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 10)
+        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 5)
 
         # 5. 토픽으로 노이즈 제거
         tf_idf, words = self._extract_topic(tokens_list)
@@ -199,7 +199,7 @@ class ClusterMaker(Schedule):
         # 6. 노이즈 제거된 군집에 대하여, c-TF-IDF로 다시 토픽 추출
         classed_tokens = _tokens_per_label(labels, tokens_list)
         c_tf_idf, c_words = self._extract_topic(classed_tokens)
-        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 10)
+        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 5)
 
         return topics, labels
 
@@ -227,6 +227,7 @@ class ClusterMaker(Schedule):
                     cur_topics[word] += tf_idf.toarray()[0][self.vectorizer.vocabulary_[word]]
 
         for label in topics.keys():
+            # TODO 임계치
             avg_tf_idf = sum(reprocessed_topics[label].values()) / len(reprocessed_topics[label])
             for idx in list(reversed(range(len(topics[label])))):
                 word = topics[label][idx][0]
@@ -248,7 +249,9 @@ class ClusterMaker(Schedule):
 
             for word, _ in cur_topics:
                 if word != '':
-                    cur_tf_idf += tf_idf.toarray()[0][self.vectorizer.vocabulary_[word]]
+                    pass
+                    # TODO 해당 기사 제목에 대한 word의 빈도 수 카운팅
+                    # cur_tf_idf += tf_idf.toarray()[0][self.vectorizer.vocabulary_[word]]
 
             tf_idf_values.append(cur_tf_idf)
             thresholds[label].append(cur_tf_idf)
@@ -259,6 +262,14 @@ class ClusterMaker(Schedule):
             q3 = series.quantile(.75)
             iqr = q3 - q1
             thresholds[label] = q1 - iqr * 1.3
+            if thresholds[label] < 0:
+                thresholds[label] = 0
+
+        labels_idx = 0
+        for label, tf_idf in zip(labels, tf_idf_values):
+            if thresholds[label] >= tf_idf:
+                labels[labels_idx] = -1
+            labels_idx += 1
 
         return labels
 
