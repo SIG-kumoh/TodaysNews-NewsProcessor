@@ -34,8 +34,9 @@ if __name__ == '__main__':
 #             print(f'{idx} : {article_list[idx].title}')
 #             c += 1
 #     print(f'클러스터 크기 : {c}')
-#     topic_list = []
-#     for topic in topic_words[cur]:
-#         topic_list.append(topic[0])
-#     print(f'토픽 : {topic_list}')
+#     if c != 0:
+#         topic_list = []
+#         for topic in topic_words[cur]:
+#             topic_list.append(topic[0])
+#         print(f'토픽 : {topic_list}')
 #     print()

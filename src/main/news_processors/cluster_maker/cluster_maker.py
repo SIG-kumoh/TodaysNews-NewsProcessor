@@ -42,7 +42,7 @@ class ClusterMaker(Schedule):
         self.hot_cluster_repository = HotClusterRepository()
 
         self.noise_threshold = 0.5
-        self.min_cluster_size = 5
+        self.min_cluster_size = 3
         self.min_document = 20
 
         self.section_id = {}
@@ -65,8 +65,8 @@ class ClusterMaker(Schedule):
         self.cluster_repository.delete(clusters)
 
         # 섹션 별 클러스터링
-        #for section_name in self.section_id.keys():
-        self.clustering("세계", t_date)
+        for section_name in self.section_id.keys():
+            self.clustering(section_name, t_date)
 
         # 당일 핫 클러스터 삭제
         hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
@@ -192,14 +192,13 @@ class ClusterMaker(Schedule):
         topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 5)
 
         # 5. 토픽으로 노이즈 제거
-        tf_idf, words = self._extract_topic(tokens_list)
-        topics = self._remove_noise_topics(topics, labels, tf_idf)
-        labels = self._remove_noise_news(topics, preprocessed_list, labels, tf_idf)
+        topics = self._remove_noise_topics(topics, article_list, labels)
+        labels = self._remove_noise_news(topics, article_list, labels)
 
         # 6. 노이즈 제거된 군집에 대하여, c-TF-IDF로 다시 토픽 추출
         classed_tokens = _tokens_per_label(labels, tokens_list)
         c_tf_idf, c_words = self._extract_topic(classed_tokens)
-        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 5)
+        topics = _extract_words_per_topic(c_tf_idf, c_words, labels, 3)
 
         return topics, labels
 
@@ -213,64 +212,59 @@ class ClusterMaker(Schedule):
 
         return c_tf_idf, words
 
-    def _remove_noise_topics(self, topics, labels, matrix):
+    def _remove_noise_topics(self, topics, article_list: list[Article], labels):
         reprocessed_topics = {}
         for label in topics.keys():
             reprocessed_topics[label] = {}
             for word, tf_idf in topics[label]:
                 reprocessed_topics[label][word] = 0.0
 
-        for label, tf_idf in zip(labels, matrix):
-            cur_topics = reprocessed_topics[label]
+        for cluster_idx, article in zip(labels, article_list):
+            cur_topics = reprocessed_topics[cluster_idx]
             for word in cur_topics.keys():
                 if word != '':
-                    cur_topics[word] += tf_idf.toarray()[0][self.vectorizer.vocabulary_[word]]
+                    word_content_frequency = article.content.count(word)
+                    word_title_frequency = article.title.count(word)
+                    cur_topics[word] += (word_title_frequency * 2 + word_content_frequency)
 
         for label in topics.keys():
-            # TODO 임계치
-            avg_tf_idf = sum(reprocessed_topics[label].values()) / len(reprocessed_topics[label])
+            threshold = sum(reprocessed_topics[label].values()) / len(reprocessed_topics[label])
             for idx in list(reversed(range(len(topics[label])))):
                 word = topics[label][idx][0]
-                if reprocessed_topics[label][word] < avg_tf_idf:
+                if reprocessed_topics[label][word] <= threshold:
                     del topics[label][idx]
 
         return topics
 
-    def _remove_noise_news(self, topics, article_list, labels, matrix):
-        tf_idf_values = []
+    def _remove_noise_news(self, topics, article_list: list[Article], labels):
+        score_list = []
         thresholds = {}
 
-        for article_idx in range(labels):
-            label = labels[article_idx]
+        for article_idx in range(labels.size):
+            cluster_idx = labels[article_idx]
+            cluster_topics = topics[cluster_idx]
             article = article_list[article_idx]
+            cur_score = 0
 
-            if label not in thresholds:
-                thresholds[label] = []
+            if cluster_idx not in thresholds:
+                thresholds[cluster_idx] = []
 
-            cur_topics = topics[label]
-            cur_tf_idf = 0.0
-
-            for word, _ in cur_topics:
+            for word, _ in cluster_topics:
                 if word != '':
-                    pass
-                    # TODO 해당 기사 제목에 대한 word의 빈도 수 카운팅
-                    # cur_tf_idf += tf_idf.toarray()[0][self.vectorizer.vocabulary_[word]]
+                    word_content_frequency = article.content.count(word)
+                    word_title_frequency = article.title.count(word)
+                    cur_score += (word_title_frequency * 2 + word_content_frequency)
 
-            tf_idf_values.append(cur_tf_idf)
-            thresholds[label].append(cur_tf_idf)
+            score_list.append(cur_score)
+            thresholds[cluster_idx].append(cur_score)
 
-        for label in thresholds.keys():
-            series = pd.Series(thresholds[label])
-            q1 = series.quantile(.25)
-            q3 = series.quantile(.75)
-            iqr = q3 - q1
-            thresholds[label] = q1 - iqr * 1.3
-            if thresholds[label] < 0:
-                thresholds[label] = 0
+        for cluster_idx in thresholds.keys():
+            threshold = sum(thresholds[cluster_idx]) / len(thresholds[cluster_idx])
+            thresholds[cluster_idx] = threshold
 
         labels_idx = 0
-        for label, tf_idf in zip(labels, tf_idf_values):
-            if thresholds[label] >= tf_idf:
+        for label, score in zip(labels, score_list):
+            if thresholds[label] >= score:
                 labels[labels_idx] = -1
             labels_idx += 1
 
