@@ -56,25 +56,31 @@ class ClusterMaker(Schedule):
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-    def __call__(self, t_date: date):
+    def __call__(self, t_date: date = None):
         if t_date is None:
             t_date = date.today()
 
-        # 당일 클러스터 삭제
+        self.logger.info("clustering start")
+
+        # 당일 클러스터 조회
         clusters = self.cluster_repository.find_all_by_duration(t_date)
-        self.cluster_repository.delete(clusters)
 
         # 섹션 별 클러스터링
         for section_name in self.section_id.keys():
             self.clustering(section_name, t_date)
 
-        # 당일 핫 클러스터 삭제
+        # 핫 클러스터 생성
+        new_hot_clusters = self.make_hot_cluster(t_date)
+
+        # 당일 클러스터 삭제
+        self.cluster_repository.delete(clusters)
         hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
         self.hot_cluster_repository.delete(hot_clusters)
 
-        # 핫 클러스터 생성
-        hot_clusters = self.make_hot_cluster(t_date)
-        self.hot_cluster_repository.insert(hot_clusters)
+        # 핫 클러스터 insert
+        self.hot_cluster_repository.insert(new_hot_clusters)
+
+        self.logger.info("clustering finished")
 
     def clustering(self, section_name: str, t_date: date):
         t_datetime = datetime.combine(t_date, datetime.min.time())
@@ -258,7 +264,7 @@ class ClusterMaker(Schedule):
             q1 = series.quantile(.25)
             q3 = series.quantile(.75)
             iqr = q3 - q1
-            thresholds[label] = q1 - iqr * 1.3
+            thresholds[label] = q1 - iqr * 1.1
 
         return labels
 

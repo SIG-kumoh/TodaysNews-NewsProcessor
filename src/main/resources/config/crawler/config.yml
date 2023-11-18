@@ -14,7 +14,7 @@ CODE:
   한국일보: '469'
 
 # title, content
-EMBEDDING_TARGET: 'content'
-TOKENIZING_TARGET: 'content'
+EMBEDDING_TARGET: 'title'
+TOKENIZING_TARGET: 'title'
 EMBEDDING_MODEL: 'jhgan/ko-sroberta-nli'
 

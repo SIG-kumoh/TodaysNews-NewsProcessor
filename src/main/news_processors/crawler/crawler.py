@@ -45,6 +45,8 @@ class Crawler(Schedule):
         self.load_config()
         self.load_section()
 
+        self.logger.info("crawling start")
+
         article_list, preprocessed_list = self.crawling(t_date)
         if article_list:
             article_repository = ArticleRepository()
@@ -69,8 +71,6 @@ class Crawler(Schedule):
             self.section_id[section.section_name] = section.section_id
 
     def crawling(self, t_date: date) -> (list, list):
-        self.logger.info("crawling start")
-
         article_list = []
         preprocessed_list = []
         for press in self.conf['CODE']:
