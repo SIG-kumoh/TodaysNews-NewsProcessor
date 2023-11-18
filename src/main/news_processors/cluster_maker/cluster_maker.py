@@ -57,28 +57,18 @@ class ClusterMaker(Schedule):
         self.logger.addHandler(handler)
 
     def __call__(self, t_date: date = None):
+        self.logger.info("clustering start")
+
         if t_date is None:
             t_date = date.today()
 
-        self.logger.info("clustering start")
-
-        # 당일 클러스터 조회
-        clusters = self.cluster_repository.find_all_by_duration(t_date)
-        self.cluster_repository.delete(clusters)
-
-        # 섹션 별 클러스터링
         for section_name in self.section_id.keys():
             self.clustering(section_name, t_date)
 
         # 핫 클러스터 생성
         new_hot_clusters = self.make_hot_cluster(t_date)
-
-        # 당일 클러스터 삭제
-        self.cluster_repository.delete(clusters)
-        hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
-        self.hot_cluster_repository.delete(hot_clusters)
-
-        # 핫 클러스터 insert
+        old_hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
+        self.hot_cluster_repository.delete(old_hot_clusters)
         self.hot_cluster_repository.insert(new_hot_clusters)
 
         self.logger.info("clustering finished")
@@ -97,6 +87,10 @@ class ClusterMaker(Schedule):
                                                            centroids=centroids,
                                                            section_name=section_name)
 
+            # 클러스터 교체
+            clusters = self.cluster_repository.find_all_by_section_id(section_id=self.section_id[section_name],
+                                                                      duration=t_date)
+            self.cluster_repository.delete(clusters)
             self.cluster_repository.insert(list(labeled_clusters.values()))
             labeled_preprocessed_clusters = self._make_preprocessed_clusters(labels=labels,
                                                                              labeled_clusters=labeled_clusters,
