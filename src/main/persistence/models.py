@@ -44,7 +44,7 @@ class Cluster(Base):
     title = Column(CHAR(150), nullable=False)
     summary = Column(MEDIUMTEXT, nullable=False)
     section_id = Column(ForeignKey('section.section_id'), nullable=False, index=True)
-    related_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=False, index=True)
+    related_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=True, index=True)
 
     related_cluster = relationship('Cluster', remote_side=[cluster_id])
     section = relationship('Section')
@@ -77,3 +77,9 @@ class HotCluster(Base):
     namespace = Column(CHAR(45), nullable=False)
 
 
+class RelatedCluster(Base):
+    __tablename__ = 'related_cluster'
+
+    related_cluster_id = Column(BigInteger, primary_key=True)
+    parent_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=False, index=True)
+    child_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=False, index=True)
