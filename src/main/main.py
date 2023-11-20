@@ -2,6 +2,8 @@ from datetime import date, timedelta
 
 from module.scheduler import Scheduler, Schedule
 from news_processors import Crawler, ClusterMaker
+from news_processors.cluster_finder import ClusterFinder
+from datetime import date, datetime, timedelta
 
 
 if __name__ == '__main__':
@@ -16,6 +18,9 @@ if __name__ == '__main__':
     # crawling_start = Crawler()
     clustering_start = ClusterMaker()
     clustering_start(date(year=2023, month=11, day=10))
+
+    cluster_finder = ClusterFinder()
+    cluster_finder(datetime(2023, 11, 8))
 
     # start = date(year=2023, month=11, day=3)
     # end = date(year=2023, month=11, day=7)
@@ -40,3 +45,9 @@ if __name__ == '__main__':
 #             topic_list.append(topic[0])
 #         print(f'토픽 : {topic_list}')
 #     print()
+
+# print(f'클러스터 이름 : {cluster.title}')
+# print()
+# print('[연관 클러스터]')
+# for related_cluster in related_clusters:
+#     print(related_cluster.title)
