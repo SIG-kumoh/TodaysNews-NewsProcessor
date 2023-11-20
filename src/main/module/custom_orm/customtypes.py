@@ -15,10 +15,13 @@ class Vector(TypeDecorator):
         return serialized
 
     def process_result_value(self, value, dialect) -> np.ndarray:
-        with io.BytesIO() as memfile:
-            memfile.write(value)
-            memfile.seek(0)
-            vec = np.load(memfile)
+        try:
+            with io.BytesIO() as memfile:
+                memfile.write(value)
+                memfile.seek(0)
+                vec = np.load(memfile)
+        except:
+            vec = None
         return vec
 
 
@@ -32,8 +35,11 @@ class PyObject(TypeDecorator):
         return serialized
 
     def process_result_value(self, value, dialect):
-        with io.BytesIO() as memfile:
-            memfile.write(value)
-            memfile.seek(0)
-            value = pickle.load(memfile)
+        try:
+            with io.BytesIO() as memfile:
+                memfile.write(value)
+                memfile.seek(0)
+                value = pickle.load(memfile)
+        except:
+            value = None
         return value

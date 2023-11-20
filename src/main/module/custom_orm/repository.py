@@ -66,22 +66,28 @@ class Repository:
 
     # READ
     def find_by(self, query: Query):
-        table = Table(self.table_name, self.meta_data, autoload=True, autoload_with=self.engine)
+        table = self._model_class.__table__
         query = select(table).where(query(table))
-        datas = self.engine.execute(query)
-        return self._model_class(**datas.fetchone())
+
+        def executable(sess):
+            return sess.query(self._model_class).from_statement(query).one()
+        return self.exec(executable)
 
     def find_all(self) -> List:
-        table = Table(self.table_name, self.meta_data, autoload=True, autoload_with=self.engine)
+        table = self._model_class.__table__
         query = select(table)
-        datas = self.engine.execute(query)
-        return [self._model_class(**row) for row in datas.fetchall()]
+
+        def executable(sess):
+            return sess.query(self._model_class).from_statement(query).all()
+        return self.exec(executable)
 
     def find_all_by(self, query: Query) -> List:
-        table = Table(self.table_name, self.meta_data, autoload=True, autoload_with=self.engine)
+        table = self._model_class.__table__
         query = select(table).where(query(table))
-        datas = self.engine.execute(query)
-        return [self._model_class(**row) for row in datas.fetchall()]
+
+        def executable(sess):
+            return sess.query(self._model_class).from_statement(query).all()
+        return self.exec(executable)
 
     def count_by(self, query: Query) -> int:
         table = Table(self.table_name, self.meta_data, autoload=True, autoload_with=self.engine)
