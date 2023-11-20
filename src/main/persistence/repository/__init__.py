@@ -4,3 +4,4 @@ from .section_repository import SectionRepository
 from .hot_cluster_repository import HotClusterRepository
 from .preprocessed_article_repository import PreprocessedArticleRepository
 from .preprocessed_cluster_repository import PreprocessedClusterRepository
+from .related_cluster_repository import RelatedCluster
