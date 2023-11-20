@@ -52,7 +52,7 @@ class MultiDocsSummarizer:
 
         for article, preprocessed_article in zip(article_list, preprocessed_list):
             news_list.append(News(title=article.title,
-                                  lead=preprocessed_article.read,
+                                  lead=preprocessed_article.lead,
                                   content=article.content,
                                   summary=preprocessed_article.summary))
 

@@ -56,7 +56,7 @@ class PreprocessedArticle(Base):
     article_id = Column(ForeignKey('article.article_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     tokens = Column(PyObject, nullable=False)
     embedding = Column(Vector, nullable=False)
-    read = Column(MEDIUMTEXT, nullable=False)
+    lead = Column(MEDIUMTEXT, nullable=False)
     summary = Column(MEDIUMTEXT, nullable=False)
 
 
