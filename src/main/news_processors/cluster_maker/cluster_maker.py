@@ -194,7 +194,7 @@ class ClusterMaker(Schedule):
 
         # 5. 토픽으로 노이즈 제거
         topics = self._remove_noise_topics(topics, article_list, labels)
-        labels = self._remove_noise_news(topics, article_list, labels)
+        labels = self._remove_noise_articles(topics, article_list, labels)
 
         # 6. 노이즈 제거된 군집에 대하여, c-TF-IDF로 다시 토픽 추출
         classed_tokens = _tokens_per_label(labels, tokens_list)
@@ -237,7 +237,7 @@ class ClusterMaker(Schedule):
 
         return topics
 
-    def _remove_noise_news(self, topics, article_list: list[Article], labels):
+    def _remove_noise_articles(self, topics, article_list: list[Article], labels):
         score_list = []
         thresholds = {}
 
@@ -260,7 +260,7 @@ class ClusterMaker(Schedule):
             thresholds[cluster_idx].append(cur_score)
 
         for cluster_idx in thresholds.keys():
-            threshold = sum(thresholds[cluster_idx]) / len(thresholds[cluster_idx])
+            threshold = (sum(thresholds[cluster_idx]) / len(thresholds[cluster_idx])) * 0.5
             thresholds[cluster_idx] = threshold
 
         labels_idx = 0
