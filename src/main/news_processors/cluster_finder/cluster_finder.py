@@ -10,10 +10,12 @@ from module.scheduler import Schedule
 
 
 class ClusterFinder(Schedule):
-    def __init__(self):
+    def __init__(self, threshold: float = 4):
         self._cluster_repository = ClusterRepository()
         self._preprocessed_cluster_repository = PreprocessedClusterRepository()
         self._related_cluster_repository = RelatedClusterRepository()
+
+        self._threshold: float = threshold
 
         self.logger = logging.getLogger('cluster finder')
         self.logger.setLevel(logging.DEBUG)
@@ -56,7 +58,7 @@ class ClusterFinder(Schedule):
         :param limit_date: DB에서 조회할 날짜 제한(금일부터 limit_date까지만을 조회)
         :return: 기준 클러스터와 가장 유사하다고 판단되는 클러스터 모델 (최대 3개)
         """
-        duration = (limit_date, target_cluster.regdate - timedelta(days=1))
+        duration: tuple[date, datetime] = (limit_date, target_cluster.regdate - timedelta(days=1))
         preprocessed_target: PreprocessedCluster = self._preprocessed_cluster_repository.find_all_by_cluster(target_cluster)[0]
         clusters: list[Cluster] = self._cluster_repository.find_all_by_section_id_and_duration(section_id=target_cluster.section_id,
                                                                                                duration=duration)
@@ -77,9 +79,11 @@ class ClusterFinder(Schedule):
         for idx, element in enumerate(relational_clusters):
             if idx > 2:
                 break
-            result_list.append(element[1])
 
-        # TODO 성능 개선
+            score, cluster = element
+            if score > self._threshold:
+                result_list.append(cluster)
+
         return result_list
 
     def _is_matching(self, topics1: list[str], topics2: list[str]) -> int:

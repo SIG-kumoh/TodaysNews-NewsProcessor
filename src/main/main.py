@@ -46,8 +46,11 @@ if __name__ == '__main__':
 #         print(f'토픽 : {topic_list}')
 #     print()
 
-# print(f'클러스터 이름 : {cluster.title}')
+# print(f'{cluster.title}')
 # print()
-# print('[연관 클러스터]')
-# for related_cluster in related_clusters:
-#     print(related_cluster.title)
+# if len(raw_related_clusters) > 0:
+#     print('[연관 클러스터]')
+#     for raw_related_cluster in raw_related_clusters:
+#         print(raw_related_cluster.title)
+# else:
+#     print()
