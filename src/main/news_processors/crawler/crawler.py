@@ -171,16 +171,14 @@ class Crawler(Schedule):
 
         preprocessed_list = []
         for article in article_list:
-            if len(article.content) > 650:
-                summary = self.summarizer.summarize(article.content[len(article.content) // 2:])
-            else:
-                summary = ""
+            lead = self.lead_extractor.summarize(article.content) if len(article.content) > 200 else article.content
+            summary = self.summarizer.summarize(article.content[len(article.content) // 2:]) if len(article.content) > 650 else ""
 
             preprocessed_list.append(PreprocessedArticle(
                 tokens=self.tokenizer(article.__getattribute__(self.conf['TOKENIZING_TARGET'])),
                 embedding=self.embedding_model.encode(article.__getattribute__(self.conf['EMBEDDING_TARGET']),
                                                       show_progress_bar=False),
-                lead=self.lead_extractor.summarize(article.content),
+                lead=lead,
                 summary=summary))
         return preprocessed_list
 
