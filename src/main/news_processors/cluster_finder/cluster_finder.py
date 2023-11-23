@@ -14,6 +14,7 @@ class ClusterFinder(Schedule):
         self._cluster_repository = ClusterRepository()
         self._preprocessed_cluster_repository = PreprocessedClusterRepository()
         self._related_cluster_repository = RelatedClusterRepository()
+        self.MAX_OF_RELATIONAL = 1
 
         self._threshold: float = threshold
 
@@ -24,26 +25,21 @@ class ClusterFinder(Schedule):
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-    def __call__(self, t_date: date = date.today()):
+    def __call__(self, t_date: date = None):
         self.logger.info("relational cluster find start")
+        if t_date is None:
+            t_date = date.today()
 
         clusters: list[Cluster] = self._cluster_repository.find_all_by_duration(t_date)
-        related_clusters: list[RelatedCluster] = []
 
         for cluster in clusters:
             limit_date = datetime.combine(cluster.regdate.date(), datetime.min.time()) - timedelta(weeks=2)
 
             raw_related_clusters = self.find_related_cluster(target_cluster=cluster, limit_date=limit_date)
-            for raw_related_cluster in raw_related_clusters:
-                related_clusters.append(RelatedCluster(parent_cluster_id=cluster.cluster_id,
-                                                       child_cluster_id=raw_related_cluster.cluster_id))
+            if len(raw_related_clusters) > 0:
+                cluster.related_cluster_id = raw_related_clusters[0].cluster_id
 
-        related_clusters = self._related_cluster_repository.insert(related_clusters)
-        for cluster in clusters:
-            for related_cluster in related_clusters:
-                if related_cluster.parent_cluster_id == cluster.related_cluster_id:
-                    cluster.related_cluster_id = related_cluster.related_cluster_id
-        self._cluster_repository.insert(clusters)
+        self._cluster_repository.update(clusters)
 
         self.logger.info("relational cluster find finished")
 
@@ -77,7 +73,7 @@ class ClusterFinder(Schedule):
         relational_clusters = sorted(relational_clusters, key=lambda x: x[0], reverse=True)
         result_list: list[Cluster] = []
         for idx, element in enumerate(relational_clusters):
-            if idx > 2:
+            if idx == self.MAX_OF_RELATIONAL:
                 break
 
             score, cluster = element
