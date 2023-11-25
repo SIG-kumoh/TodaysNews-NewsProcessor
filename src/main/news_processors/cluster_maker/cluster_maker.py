@@ -5,6 +5,7 @@ from persistence.models import Cluster, PreprocessedCluster, Article, HotCluster
 from ._ctfidf import ClassTfidfTransformer
 from ._clustering import clustering
 from persistence.repository import *
+from .cluster_finder import ClusterFinder
 
 warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
@@ -34,6 +35,7 @@ class ClusterMaker(Schedule):
         self.vectorizer = CountVectorizer(tokenizer=_no_process, preprocessor=_no_process, token_pattern=None)
         self.ctfidf = ClassTfidfTransformer()
         self.mds = MultiDocsSummarizer(SentenceTransformer('jhgan/ko-sroberta-nli'))
+        self.cluster_finder = ClusterFinder()
 
         self.article_repository = ArticleRepository()
         self.preprocessed_article_repository = PreprocessedArticleRepository()
@@ -105,6 +107,7 @@ class ClusterMaker(Schedule):
                     article.cluster_id = labeled_clusters[label].cluster_id
 
             article_list = self.article_repository.update(article_list)
+            self.cluster_finder(t_date)
 
         else:
             self.logger.debug(f'{section_name} section, too small')

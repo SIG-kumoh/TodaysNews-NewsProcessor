@@ -2,7 +2,6 @@ from datetime import date, timedelta
 
 from module.scheduler import Scheduler, Schedule
 from news_processors import Crawler, ClusterMaker
-from news_processors.cluster_finder import ClusterFinder
 from datetime import date, datetime, timedelta
 
 
@@ -15,22 +14,19 @@ if __name__ == '__main__':
     # scheduler.start()
     # scheduler.run_forever()
 
-    # crawling_start = Crawler()
+    crawling_start = Crawler()
     clustering_start = ClusterMaker()
-    clustering_start(date(year=2023, month=11, day=10))
+    # clustering_start(date(year=2023, month=9, day=10))
 
-    cluster_finder = ClusterFinder()
-    cluster_finder(datetime(2023, 11, 8))
+    start = date(year=2023, month=8, day=1)
+    end = date(year=2023, month=11, day=1)
 
-    # start = date(year=2023, month=11, day=3)
-    # end = date(year=2023, month=11, day=7)
-    #
-    # t_date = start
-    # while t_date <= end:
-    #     print(f'{t_date} start')
-    #     crawling_start(t_date)
-    #     clustering_start(t_date)
-    #     t_date = t_date + timedelta(days=1)
+    t_date = start
+    while t_date <= end:
+        print(f'{t_date} start')
+        # crawling_start(t_date)
+        clustering_start(t_date)
+        t_date = t_date + timedelta(days=1)
 
 # for cur in range(len(topic_words) - 1):
 #     c = 0
