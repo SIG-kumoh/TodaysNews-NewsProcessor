@@ -12,7 +12,6 @@ warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 import numpy as np
 import pandas as pd
 
-from tqdm import tqdm
 from umap import UMAP
 from typing import List, Dict, Union
 from datetime import datetime, date, timedelta
@@ -52,7 +51,7 @@ class ClusterMaker(Schedule):
 
         # TODO 리팩터링
         self.logger = logging.getLogger('cluster')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s : %(message)s')
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
@@ -66,6 +65,7 @@ class ClusterMaker(Schedule):
 
         for section_name in self.section_id.keys():
             self.clustering(section_name, t_date)
+        self.cluster_finder(t_date)
 
         # 핫 클러스터 생성
         new_hot_clusters = self.make_hot_cluster(t_date)
@@ -107,7 +107,6 @@ class ClusterMaker(Schedule):
                     article.cluster_id = labeled_clusters[label].cluster_id
 
             article_list = self.article_repository.update(article_list)
-            self.cluster_finder(t_date)
 
         else:
             self.logger.debug(f'{section_name} section, too small')
@@ -129,7 +128,7 @@ class ClusterMaker(Schedule):
             centroids[label].append(article)
 
         topics[-1] = [('temp', 0)]
-        for label, articles_list_in_cluster in tqdm(centroids.items()):
+        for label, articles_list_in_cluster in centroids.items():
             topic_words = []
             for topics_in_cluster in topics[label]:
                 topic_words.append(topics_in_cluster[0])

@@ -14,11 +14,11 @@ if __name__ == '__main__':
     # scheduler.start()
     # scheduler.run_forever()
 
-    crawling_start = Crawler()
+    # crawling_start = Crawler()
     clustering_start = ClusterMaker()
     # clustering_start(date(year=2023, month=9, day=10))
 
-    start = date(year=2023, month=8, day=1)
+    start = date(year=2023, month=9, day=15)
     end = date(year=2023, month=11, day=1)
 
     t_date = start

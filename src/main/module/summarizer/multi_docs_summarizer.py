@@ -36,14 +36,15 @@ class MultiDocsSummarizer:
 
     def _get_rouge_score(self, news: News, topics: list[str]) -> float:
         """뉴스의 rouge 점수 산출"""
-        if news.lead == "":
+        try:
+            if news.summary == "":
+                return self._rouge.get_scores(hyps=news.lead, refs=' '.join(topics))[0]['rouge-1']['r']
+            else:
+                return (self._rouge.get_scores(hyps=news.summary, refs=news.content)[0]['rouge-1']['r'] +
+                        self._rouge.get_scores(hyps=news.summary, refs=news.lead)[0]['rouge-1']['r'] +
+                        self._rouge.get_scores(hyps=news.summary, refs=' '.join(topics))[0]['rouge-1']['r'])
+        except:
             return 0
-        elif news.summary == "":
-            return self._rouge.get_scores(hyps=news.lead, refs=' '.join(topics))[0]['rouge-1']['f']
-        else:
-            return (self._rouge.get_scores(hyps=news.summary, refs=news.content)[0]['rouge-1']['f'] +
-                    self._rouge.get_scores(hyps=news.summary, refs=news.lead)[0]['rouge-1']['f'] +
-                    self._rouge.get_scores(hyps=news.summary, refs=' '.join(topics))[0]['rouge-1']['f'])
 
     def _get_news_list(self,
                        article_list: list[Article],
@@ -66,7 +67,7 @@ class MultiDocsSummarizer:
         """다중 문서 요약 수행"""
         news_list: list[News] = self._get_news_list(article_list=article_list,
                                                     preprocessed_list=preprocessed_list)
-        centroid: Centroid = Centroid(Article(), 0, "")
+        centroid: Centroid = Centroid(Article(), -1, "")
 
         for idx, news in enumerate(news_list):
             cur_rdass: float = self._get_rdass_score(news=news)
