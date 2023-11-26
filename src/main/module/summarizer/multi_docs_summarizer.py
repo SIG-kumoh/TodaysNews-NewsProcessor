@@ -29,9 +29,8 @@ class MultiDocsSummarizer:
 
     def _get_rdass_score(self, news: News) -> float:
         """뉴스의 RDASS 점수 산출"""
-        if news.summary == "":
-            # 리드는 이미 정답인 요약문이므로 RDASS 점수를 산정하지 않음
-            return 1
+        if news.lead == "" or news.summary == "":
+            return 0
         else:
             return self._rdass.get_scores(docs=news.content, ref=news.title, predict=news.summary)
 
