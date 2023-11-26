@@ -37,7 +37,9 @@ class MultiDocsSummarizer:
 
     def _get_rouge_score(self, news: News, topics: list[str]) -> float:
         """뉴스의 rouge 점수 산출"""
-        if news.summary == "":
+        if news.lead == "":
+            return 0
+        elif news.summary == "":
             return self._rouge.get_scores(hyps=news.lead, refs=' '.join(topics))[0]['rouge-1']['f']
         else:
             return (self._rouge.get_scores(hyps=news.summary, refs=news.content)[0]['rouge-1']['f'] +

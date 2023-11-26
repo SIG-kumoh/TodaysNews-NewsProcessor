@@ -44,8 +44,10 @@ class Cluster(Base):
     title = Column(CHAR(150), nullable=False)
     summary = Column(MEDIUMTEXT, nullable=False)
     section_id = Column(ForeignKey('section.section_id'), nullable=False, index=True)
-    related_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=True, index=True)
+    centroid_id = Column(ForeignKey('article.article_id'), nullable=False, index=True)
+    related_cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='SET NULL', onupdate='SET NULL'), index=True)
 
+    centroid = relationship('Article', primaryjoin='Cluster.centroid_id == Article.article_id')
     related_cluster = relationship('Cluster', remote_side=[cluster_id])
     section = relationship('Section')
 

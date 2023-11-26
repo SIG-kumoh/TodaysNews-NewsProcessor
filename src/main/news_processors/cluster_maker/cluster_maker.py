@@ -153,6 +153,7 @@ class ClusterMaker(Schedule):
                                     img_url=centroids[label].article.img_url,
                                     title=centroids[label].article.title,
                                     summary=centroids[label].summary,
+                                    centroid_id=centroids[label].article.article_id,
                                     section_id=self.section_id[section_name],
                                     related_cluster_id=None)
                 labeled_clusters[label] = new_topic
