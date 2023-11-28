@@ -76,7 +76,7 @@ class HotCluster(Base):
     cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     regdate = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
-    namespace = Column(CHAR(45), nullable=False)
+    room_name = Column(CHAR(45), nullable=False)
 
 
 class RelatedCluster(Base):

@@ -1,5 +1,8 @@
 import logging
 import warnings
+from urllib.request import Request
+
+import requests
 
 from persistence.models import Cluster, PreprocessedCluster, Article, HotCluster
 from ._ctfidf import ClassTfidfTransformer
@@ -68,6 +71,7 @@ class ClusterMaker(Schedule):
         self.cluster_finder(t_date)
 
         # 핫 클러스터 생성
+        _close_all_chat_room()
         new_hot_clusters = self.make_hot_cluster(t_date)
         old_hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
         self.hot_cluster_repository.delete(old_hot_clusters)
@@ -308,7 +312,7 @@ class ClusterMaker(Schedule):
                 cluster_id=cur_cluster.cluster_id,
                 regdate=cur_cluster.regdate,
                 size=cur_count,
-                namespace='test'
+                room_name=_create_chat_room(str(cur_cluster.cluster_id))
             )
             hot_clusters.append(hot_cluster)
 
@@ -357,3 +361,53 @@ def _tokens_per_label(labels, tokens_list):
     tokens_per_label = labeled_tokens.groupby(['Label'], as_index=False).agg({'Tokens': 'sum'})
     classed_tokens = tokens_per_label.Tokens.values
     return classed_tokens
+
+
+def _create_chat_room(room_name: str) -> str:
+    creation_url = f'http://202.31.202.34/chat/room/{room_name}'
+    session = requests.session()
+
+    try:
+        headers = {
+            'Authorization': _login(session)
+        }
+        res = session.post(creation_url, headers=headers)
+        res.raise_for_status()
+    except:
+        room_name = 'ROOM CREATION FAILED'
+    finally:
+        session.close()
+    return room_name
+
+
+def _close_all_chat_room():
+    close_url = f'http://202.31.202.34/chat/room'
+    session = requests.session()
+
+    try:
+        headers = {
+            'Authorization': _login(session)
+        }
+        res = session.delete(close_url, headers=headers)
+        res.raise_for_status()
+    except:
+        pass
+    finally:
+        session.close()
+
+
+def _login(session: requests.Session) -> str:
+    login_url = 'http://202.31.202.34/api/auth/login'
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    body = {
+        'username': 'system',
+        'password': 'system'
+    }
+    res = session.post(login_url, headers=headers, json=body)
+    res.raise_for_status()
+
+    return res.headers.get('Authorization')
+
