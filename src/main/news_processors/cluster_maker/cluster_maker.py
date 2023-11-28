@@ -27,6 +27,7 @@ from module.summarizer.multi_docs_summarizer import MultiDocsSummarizer, Centroi
 CONFIG_PATH = 'resources/config/cluster_maker/config.yml'
 
 
+
 class ClusterMaker(Schedule):
     def __init__(self):
         self.umap = UMAP(n_neighbors=15,
@@ -88,8 +89,11 @@ class ClusterMaker(Schedule):
             topic_words, labels = self._topic_clustering(article_list)
             topic_words, labels = self._remove_minimum_cluster(topic_words, labels)
             centroids = self._extract_centroids(article_list, labels, topic_words)
+            counts = _count_articles(labels)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,
+                                                           counts=counts,
+                                                           topic_words=topic_words,
                                                            centroids=centroids,
                                                            section_name=section_name)
 
@@ -147,6 +151,8 @@ class ClusterMaker(Schedule):
     def _make_labeled_clusters(self,
                                labels,
                                t_datetime,
+                               counts: dict[int, int],
+                               topic_words: Dict[int, list[tuple[str, float]]],
                                centroids: Dict[int, Centroid],
                                section_name):
         labeled_clusters = {}
@@ -156,6 +162,8 @@ class ClusterMaker(Schedule):
                                     img_url=centroids[label].article.img_url,
                                     title=centroids[label].article.title,
                                     summary=centroids[label].summary,
+                                    words=','.join([e[0] for e in topic_words[label]]),
+                                    size=counts[label],
                                     centroid_id=centroids[label].article.article_id,
                                     section_id=self.section_id[section_name],
                                     related_cluster_id=None)
@@ -361,6 +369,16 @@ def _tokens_per_label(labels, tokens_list):
     tokens_per_label = labeled_tokens.groupby(['Label'], as_index=False).agg({'Tokens': 'sum'})
     classed_tokens = tokens_per_label.Tokens.values
     return classed_tokens
+
+
+def _count_articles(labels):
+    counts = {}
+    for label in labels:
+        if label not in counts.keys():
+            counts[label] = 0
+        else:
+            counts[label] += 1
+    return counts
 
 
 def _create_chat_room(room_name: str) -> str:
