@@ -41,11 +41,15 @@ class Cluster(Base):
     cluster_id = Column(BigInteger, primary_key=True)
     regdate = Column(DateTime, nullable=False)
     img_url = Column(CHAR(130), nullable=False)
+    size = Column(Integer, nullable=False)
     title = Column(CHAR(150), nullable=False)
+    words = Column(CHAR(30), nullable=False)
     summary = Column(MEDIUMTEXT, nullable=False)
     section_id = Column(ForeignKey('section.section_id'), nullable=False, index=True)
-    related_cluster_id = Column(ForeignKey('cluster.cluster_id'), nullable=True, index=True)
+    centroid_id = Column(ForeignKey('article.article_id'), nullable=False, index=True)
+    related_cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='SET NULL', onupdate='SET NULL'), index=True)
 
+    centroid = relationship('Article', primaryjoin='Cluster.centroid_id == Article.article_id')
     related_cluster = relationship('Cluster', remote_side=[cluster_id])
     section = relationship('Section')
 
@@ -74,7 +78,7 @@ class HotCluster(Base):
     cluster_id = Column(ForeignKey('cluster.cluster_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     regdate = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
-    namespace = Column(CHAR(45), nullable=False)
+    room_name = Column(CHAR(45), nullable=False)
 
 
 class RelatedCluster(Base):

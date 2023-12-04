@@ -10,7 +10,7 @@ class PreprocessedClusterRepository(Repository):
     def __init__(self):
         super().__init__(PreprocessedCluster)
 
-    def find_all_by_cluster(self, clusters: Union[Cluster, List[Cluster]]):
+    def find_all_by_cluster(self, clusters: Union[Cluster, List[Cluster]]) -> list[PreprocessedCluster]:
         if isinstance(clusters, Cluster):
             clusters = [clusters]
         cluster_ids = [cluster.cluster_id for cluster in clusters]

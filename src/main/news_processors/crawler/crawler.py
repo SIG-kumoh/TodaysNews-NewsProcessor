@@ -33,7 +33,7 @@ class Crawler(Schedule):
 
         # TODO 리팩터링
         self.logger = logging.getLogger('crawler')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s : %(message)s')
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)

@@ -1,17 +1,20 @@
 import logging
 import warnings
+from urllib.request import Request
+
+import requests
 
 from persistence.models import Cluster, PreprocessedCluster, Article, HotCluster
 from ._ctfidf import ClassTfidfTransformer
 from ._clustering import clustering
 from persistence.repository import *
+from .cluster_finder import ClusterFinder
 
 warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 
 import numpy as np
 import pandas as pd
 
-from tqdm import tqdm
 from umap import UMAP
 from typing import List, Dict, Union
 from datetime import datetime, date, timedelta
@@ -24,6 +27,7 @@ from module.summarizer.multi_docs_summarizer import MultiDocsSummarizer, Centroi
 CONFIG_PATH = 'resources/config/cluster_maker/config.yml'
 
 
+
 class ClusterMaker(Schedule):
     def __init__(self):
         self.umap = UMAP(n_neighbors=15,
@@ -34,6 +38,7 @@ class ClusterMaker(Schedule):
         self.vectorizer = CountVectorizer(tokenizer=_no_process, preprocessor=_no_process, token_pattern=None)
         self.ctfidf = ClassTfidfTransformer()
         self.mds = MultiDocsSummarizer(SentenceTransformer('jhgan/ko-sroberta-nli'))
+        self.cluster_finder = ClusterFinder()
 
         self.article_repository = ArticleRepository()
         self.preprocessed_article_repository = PreprocessedArticleRepository()
@@ -50,7 +55,7 @@ class ClusterMaker(Schedule):
 
         # TODO 리팩터링
         self.logger = logging.getLogger('cluster')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s : %(message)s')
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
@@ -64,8 +69,10 @@ class ClusterMaker(Schedule):
 
         for section_name in self.section_id.keys():
             self.clustering(section_name, t_date)
+        self.cluster_finder(t_date)
 
         # 핫 클러스터 생성
+        _close_all_chat_room()
         new_hot_clusters = self.make_hot_cluster(t_date)
         old_hot_clusters = self.hot_cluster_repository.find_all_by_duration(t_date)
         self.hot_cluster_repository.delete(old_hot_clusters)
@@ -82,8 +89,11 @@ class ClusterMaker(Schedule):
             topic_words, labels = self._topic_clustering(article_list)
             topic_words, labels = self._remove_minimum_cluster(topic_words, labels)
             centroids = self._extract_centroids(article_list, labels, topic_words)
+            counts = _count_articles(labels)
             labeled_clusters = self._make_labeled_clusters(labels=labels,
                                                            t_datetime=t_datetime,
+                                                           counts=counts,
+                                                           topic_words=topic_words,
                                                            centroids=centroids,
                                                            section_name=section_name)
 
@@ -126,7 +136,7 @@ class ClusterMaker(Schedule):
             centroids[label].append(article)
 
         topics[-1] = [('temp', 0)]
-        for label, articles_list_in_cluster in tqdm(centroids.items()):
+        for label, articles_list_in_cluster in centroids.items():
             topic_words = []
             for topics_in_cluster in topics[label]:
                 topic_words.append(topics_in_cluster[0])
@@ -141,6 +151,8 @@ class ClusterMaker(Schedule):
     def _make_labeled_clusters(self,
                                labels,
                                t_datetime,
+                               counts: dict[int, int],
+                               topic_words: Dict[int, list[tuple[str, float]]],
                                centroids: Dict[int, Centroid],
                                section_name):
         labeled_clusters = {}
@@ -150,6 +162,9 @@ class ClusterMaker(Schedule):
                                     img_url=centroids[label].article.img_url,
                                     title=centroids[label].article.title,
                                     summary=centroids[label].summary,
+                                    words=','.join([e[0] for e in topic_words[label]]),
+                                    size=counts[label],
+                                    centroid_id=centroids[label].article.article_id,
                                     section_id=self.section_id[section_name],
                                     related_cluster_id=None)
                 labeled_clusters[label] = new_topic
@@ -305,7 +320,7 @@ class ClusterMaker(Schedule):
                 cluster_id=cur_cluster.cluster_id,
                 regdate=cur_cluster.regdate,
                 size=cur_count,
-                namespace='test'
+                room_name=_create_chat_room(str(cur_cluster.cluster_id))
             )
             hot_clusters.append(hot_cluster)
 
@@ -354,3 +369,63 @@ def _tokens_per_label(labels, tokens_list):
     tokens_per_label = labeled_tokens.groupby(['Label'], as_index=False).agg({'Tokens': 'sum'})
     classed_tokens = tokens_per_label.Tokens.values
     return classed_tokens
+
+
+def _count_articles(labels):
+    counts = {}
+    for label in labels:
+        if label not in counts.keys():
+            counts[label] = 0
+        else:
+            counts[label] += 1
+    return counts
+
+
+def _create_chat_room(room_name: str) -> str:
+    creation_url = f'http://202.31.202.34/chat/room/{room_name}'
+    session = requests.session()
+
+    try:
+        headers = {
+            'Authorization': _login(session)
+        }
+        res = session.post(creation_url, headers=headers)
+        res.raise_for_status()
+    except:
+        room_name = 'ROOM CREATION FAILED'
+    finally:
+        session.close()
+    return room_name
+
+
+def _close_all_chat_room():
+    close_url = f'http://202.31.202.34/chat/room'
+    session = requests.session()
+
+    try:
+        headers = {
+            'Authorization': _login(session)
+        }
+        res = session.delete(close_url, headers=headers)
+        res.raise_for_status()
+    except:
+        pass
+    finally:
+        session.close()
+
+
+def _login(session: requests.Session) -> str:
+    login_url = 'http://202.31.202.34/api/auth/login'
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    body = {
+        'username': 'system',
+        'password': 'system'
+    }
+    res = session.post(login_url, headers=headers, json=body)
+    res.raise_for_status()
+
+    return res.headers.get('Authorization')
+

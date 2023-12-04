@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from module.scheduler import Scheduler, Schedule
 from news_processors import Crawler, ClusterMaker
+from datetime import date, datetime, timedelta
 
 
 if __name__ == '__main__':
@@ -15,17 +16,17 @@ if __name__ == '__main__':
 
     # crawling_start = Crawler()
     clustering_start = ClusterMaker()
-    clustering_start(date(year=2023, month=11, day=10))
+    # clustering_start(date(year=2023, month=9, day=10))
 
-    # start = date(year=2023, month=11, day=3)
-    # end = date(year=2023, month=11, day=7)
-    #
-    # t_date = start
-    # while t_date <= end:
-    #     print(f'{t_date} start')
-    #     crawling_start(t_date)
-    #     clustering_start(t_date)
-    #     t_date = t_date + timedelta(days=1)
+    start = date(year=2023, month=9, day=15)
+    end = date(year=2023, month=11, day=1)
+
+    t_date = start
+    while t_date <= end:
+        print(f'{t_date} start')
+        # crawling_start(t_date)
+        clustering_start(t_date)
+        t_date = t_date + timedelta(days=1)
 
 # for cur in range(len(topic_words) - 1):
 #     c = 0
@@ -39,4 +40,13 @@ if __name__ == '__main__':
 #         for topic in topic_words[cur]:
 #             topic_list.append(topic[0])
 #         print(f'토픽 : {topic_list}')
+#     print()
+
+# print(f'{cluster.title}')
+# print()
+# if len(raw_related_clusters) > 0:
+#     print('[연관 클러스터]')
+#     for raw_related_cluster in raw_related_clusters:
+#         print(raw_related_cluster.title)
+# else:
 #     print()
