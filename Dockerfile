@@ -19,6 +19,7 @@ RUN apt-get install -y llvm
 RUN apt-get install -y llvm-dev
 RUN apt-get install -y libffi-dev
 RUN apt-get install -y libssl-dev
+RUN apt-get install -y openjdk-11-jdk
 
 ENV LLVM_CONFIG=/usr/bin/llvm-config
 RUN pip install llvmlite==0.41.0
